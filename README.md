@@ -48,7 +48,9 @@ User ↔ Controller ↔ Service ↔ Repository ↔ Database (SQL Server)
 
 gym-planner/
 ├── src/main/java/com/gymplanner/
+
 │   ├── controller/      # Application endpoints
+
 │   ├── service/         # Business logic
 │   ├── repository/      # Database interfaces
 │   ├── model/           # Entities (User, Exercise, Workout, etc.)
