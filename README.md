@@ -128,17 +128,29 @@ Utilizator ↔ Controller ↔ Service ↔ Repository ↔ Bază de Date (SQL Serv
 4.Model: Definește structura datelor (Entitățile).
 
 gym-planner/
+
 ├── src/main/java/com/gymplanner/
+
 │   ├── controller/      # Endpoint-urile aplicației
+
 │   ├── service/         # Logica de business
+
 │   ├── repository/      # Interfețele pentru baza de date
+
 │   ├── model/           # Entitățile (User, Exercise, Workout, etc.)
+
 │   └── GymPlannerApplication.java
+
 ├── src/main/resources/
+
 │   ├── templates/       # Pagini HTML (Thymeleaf)
+
 │   ├── static/          # Fișiere CSS, JavaScript, Imagini
+
 │   └── application.properties
+
 └── pom.xml              # Dependențele Maven
+
 ## Modelul de Date
 Aplicația se bazează pe următoarele entități principale:
 
