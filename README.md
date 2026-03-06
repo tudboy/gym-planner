@@ -47,18 +47,27 @@ User ↔ Controller ↔ Service ↔ Repository ↔ Database (SQL Server)
 4.Model: Defines the data structure (Entities).
 
 gym-planner/
+
 ├── src/main/java/com/gymplanner/
 
 │   ├── controller/      # Application endpoints
 
 │   ├── service/         # Business logic
+
 │   ├── repository/      # Database interfaces
+
 │   ├── model/           # Entities (User, Exercise, Workout, etc.)
+
 │   └── GymPlannerApplication.java
+
 ├── src/main/resources/
+
 │   ├── templates/       # HTML pages (Thymeleaf)
+
 │   ├── static/          # Static files (CSS, JavaScript, Images)
+
 │   └── application.properties
+
 └── pom.xml              # Maven dependencies
 
 ## Data Model
