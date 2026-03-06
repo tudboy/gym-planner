@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Catalog Exerciții</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; }
+
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+
+        /* stiluri meniu */
+        .navbar { background-color: #333; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; padding: 0 10px; align-items: center; }
+        .navbar div a { float: left; display: block; color: #f2f2f2; text-align: center; padding: 14px 20px; text-decoration: none; font-size: 17px; font-weight: bold; transition: 0.3s; }
+        .navbar div a:hover { background-color: #ddd; color: black; }
+        .navbar div a.active { background-color: #007bff; color: white; }
+        .navbar-user-info { display: flex; align-items: center; color: #bbb; font-weight: bold; }
+        .btn-logout { background: #dc3545; color: white; text-decoration: none; padding: 10px 15px; border-radius: 4px; margin-left: 15px; font-size: 0.9rem; }
+
+        /* stil formular */
+        .add-form { background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #dee2e6; }
+        input, select { padding: 8px; margin-right: 10px; border: 1px solid #ced4da; border-radius: 4px; }
+        input.error { border: 2px solid #dc3545; background-color: #fff8f8; }
+        .error-msg { color: #dc3545; font-size: 0.9em; margin-bottom: 10px; font-weight: bold; display: none; }
+
+        button { padding: 8px 15px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn-add { background: #28a745; color: white; }
+
+        /* stil tabel */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #dee2e6; text-align: left; }
+        th { background: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        a { text-decoration: none; }
+        .delete-btn { color: red; margin-left: 10px; cursor: pointer; }
+
+        /* stil modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: white; padding: 30px; border-radius: 10px; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 300px;
+        }
+        .modal-box h3 { margin-top: 0; color: #dc3545; }
+        .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        .btn-yes { background: #dc3545; color: white; flex: 1; padding: 10px; border-radius: 5px; }
+        .btn-no { background: #6c757d; color: white; flex: 1; padding: 10px; border-radius: 5px; }
+
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div>
+        <a href="/calendar">Calendar</a>
+        <a href="/exercises" class="active">Catalog Exercitii</a>
+    </div>
+    <div class="navbar-user-info">
+        <span th:text="${username != null ? 'Salut, ' + username : ''}">Salut, User</span>
+        <a href="/logout" class="btn-logout">Iesire</a>
+    </div>
+</div>
+
+<div class="container">
+    <h1>Catalogul de Exercitii</h1>
+
+    <div class="add-form">
+        <h3>Adauga Exercitiu Nou</h3>
+        <div id="exerciseError" class="error-msg"></div>
+        <form id="addExerciseForm" action="/exercises/add" method="post">
+            <input type="text" id="exNameInput" name="exerciseName" placeholder="Nume Exercitiu (ex: Impins)" style="width: 250px;">
+            <select name="targetMuscleGroup">
+                <option value="Piept">Piept</option>
+                <option value="Spate">Spate</option>
+                <option value="Picioare">Picioare</option>
+                <option value="Brate">Brate</option>
+                <option value="Umeri">Umeri</option>
+                <option value="Abdomen">Abdomen</option>
+            </select>
+            <button type="button" class="btn-add" onclick="validateAddExercise()">Salveaza</button>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nume Exercitiu</th>
+            <th>Grupa Musculara</th>
+            <th>Tip</th>
+            <th>Actiuni</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="ex : ${listaExercitii}">
+            <td th:text="${ex.id}">1</td>
+            <td th:text="${ex.exerciseName}">Impins</td>
+            <td th:text="${ex.targetMuscleGroup}">Piept</td>
+            <td>
+                <span th:if="${ex.user == null}" style="color: grey; font-weight: bold;">Global</span>
+                <span th:if="${ex.user != null}" style="color: green;">Personal</span>
+            </td>
+            <td>
+                <a th:href="@{/exercises/edit/{id}(id=${ex.id})}" style="color: blue; margin-right: 10px;">Editeaza</a>
+                <span class="delete-btn" th:onclick="'openDeleteModal(' + ${ex.id} + ')'">Sterge</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Stergere Exercitiu</h3>
+        <p>Esti sigur ca vrei sa stergi acest exercitiu?</p>
+        <p style="font-size: 0.8em; color: #666;">Aceasta actiune este ireversibila.</p>
+        <div class="modal-buttons">
+            <button class="btn-no" onclick="closeDeleteModal()">NU</button>
+            <button class="btn-yes" onclick="confirmDelete()">DA, Sterge</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // validare adaugare exercitiu
+    function validateAddExercise() {
+        const nameInput = document.getElementById('exNameInput');
+        const errorDiv = document.getElementById('exerciseError');
+        const form = document.getElementById('addExerciseForm');
+
+        nameInput.classList.remove('error');
+        errorDiv.style.display = 'none';
+        const name = nameInput.value.trim();
+
+        try {
+            if (name === "") throw "Introdu un nume!";
+            if (name.length > 50) throw "Nume prea lung (max 50)!";
+
+            // validare regex doar litere si paranteze
+            if (!/^[a-zA-Z\s()]+$/.test(name)) throw "Doar litere si paranteze (fara cifre/simboluri)!";
+
+            form.submit();
+        } catch (err) {
+            nameInput.classList.add('error');
+            errorDiv.innerText = "Eroare: " + err;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    let exerciseIdToDelete = null;
+    const modal = document.getElementById('deleteModal');
+
+    // deschidere modal
+    function openDeleteModal(id) {
+        exerciseIdToDelete = id;
+        modal.style.display = 'flex';
+    }
+
+    // inchidere modal
+    function closeDeleteModal() {
+        exerciseIdToDelete = null;
+        modal.style.display = 'none';
+    }
+
+    // confirmare stergere
+    function confirmDelete() {
+        if (exerciseIdToDelete) {
+            window.location.href = '/exercises/delete/' + exerciseIdToDelete;
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Planificare Zi</title>
+  <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #333; }
+
+        /* stiluri inputuri */
+        input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+
+        /* stiluri erori */
+        input.error { border: 2px solid #dc3545; background-color: #fff8f8; }
+        .error-msg { color: #dc3545; font-size: 0.9em; margin-top: 5px; font-weight: bold; display: none; }
+
+        /* butoane */
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-save { background: #28a745; }
+        .btn-add { background: #007bff; width: 100%; margin-top: 15px; }
+        .btn-back { background: #6c757d; text-decoration: none; display: inline-block; padding: 10px; color: white; border-radius: 5px; margin-bottom: 20px; }
+
+        /* tabel */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+
+        .row-inputs { display: flex; gap: 10px; margin-top: 5px; }
+        .col { flex: 1; }
+        label { font-size: 0.85em; color: #666; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+  <a th:href="@{/calendar(date=${schedule.activeFromDate})}" class="btn-back">Inapoi la Calendar</a>
+
+  <div class="card">
+    <h2>Configurare Zi: <span th:text="${schedule.dayName}">Luni</span></h2>
+    <p>Data: <strong th:text="${schedule.activeFromDate}"></strong></p>
+
+    <form id="headerForm" action="/schedule/updateHeader" method="post">
+      <input type="hidden" name="id" th:value="${schedule.id}">
+
+      <label>Nume Antrenament (max 50 caractere):</label>
+      <div style="display: flex; gap: 10px;">
+        <input type="text" id="workoutNameInput" name="workoutName" th:value="${schedule.workoutName}" placeholder="ex: Piept Forta">
+
+        <div style="display: flex; align-items: center; white-space: nowrap;">
+          <input type="checkbox" name="restDay" th:checked="${schedule.restDay}" style="width: auto; margin-right: 5px;">
+          <span>Zi de pauza</span>
+        </div>
+
+        <button type="button" class="btn btn-save" onclick="validateAndSaveHeader()">Salveaza Titlul</button>
+      </div>
+      <div id="headerError" class="error-msg"></div>
+    </form>
+  </div>
+
+  <div class="card" th:if="${!schedule.restDay}">
+    <h2>Adauga Exercitiu</h2>
+
+    <div style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+      <form id="addExForm" action="/schedule/addExercise" method="post">
+        <input type="hidden" name="scheduleId" th:value="${schedule.id}">
+
+        <label>Alege Exercitiu:</label>
+        <select name="exerciseId" id="exerciseSelect" required>
+          <option value="" disabled selected>-- Selecteaza din lista --</option>
+          <option th:each="ex : ${allExercises}"
+                  th:value="${ex.id}"
+                  th:text="${ex.exerciseName}">Impins</option>
+        </select>
+
+        <div class="row-inputs">
+          <div class="col">
+            <label>Serii (1-50):</label>
+            <input type="text" id="setsInput" name="sets" value="4" placeholder="4" inputmode="numeric">
+          </div>
+          <div class="col">
+            <label>Reps (1-1000):</label>
+            <input type="text" id="repsInput" name="reps" value="10" placeholder="10" inputmode="numeric">
+          </div>
+          <div class="col">
+            <label>Pauza (0-60 min):</label>
+            <input type="text" id="restInput" name="restTime" value="2" placeholder="min" inputmode="numeric">
+          </div>
+        </div>
+
+        <div id="addError" class="error-msg" style="text-align: center;">Eroare aici</div>
+
+        <button type="button" class="btn btn-add" onclick="validateAndAddExercise()">Adauga in Plan</button>
+      </form>
+    </div>
+
+    <h3>Exercitii Planificate:</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>Exercitiu</th>
+        <th>Serii</th>
+        <th>Repetari</th>
+        <th>Pauza</th>
+        <th>Actiune</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="te : ${templateExercises}">
+        <td th:text="${te.exercise.exerciseName}">Impins</td>
+        <td th:text="${te.plannedSets}">4</td>
+        <td th:text="${te.targetReps}">10</td>
+        <td th:text="${te.restTimeMinutes + ' min'}">2 min</td>
+        <td>
+          <a th:href="@{/schedule/deleteExercise/{id}(id=${te.id})}" style="color: red; text-decoration: none;">Sterge</a>
+        </td>
+      </tr>
+      <tr th:if="${templateExercises.empty}">
+        <td colspan="5" style="text-align:center; color:#999;">Niciun exercitiu adaugat inca.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+    // validare titlu antrenament
+    function validateAndSaveHeader() {
+        const nameInput = document.getElementById('workoutNameInput');
+        const errorDiv = document.getElementById('headerError');
+        const form = document.getElementById('headerForm');
+
+        nameInput.classList.remove('error');
+        errorDiv.style.display = 'none';
+
+        try {
+            const name = nameInput.value.trim();
+
+            if (name.length > 50) {
+                throw "Numele antrenamentului nu poate depasi 50 de caractere!";
+            }
+
+            form.submit();
+
+        } catch (err) {
+            nameInput.classList.add('error');
+            errorDiv.innerText = "Eroare: " + err;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    // validare adaugare exercitiu
+    function validateAndAddExercise() {
+        const setsInput = document.getElementById('setsInput');
+        const repsInput = document.getElementById('repsInput');
+        const restInput = document.getElementById('restInput');
+        const exSelect = document.getElementById('exerciseSelect');
+        const errorDiv = document.getElementById('addError');
+        const form = document.getElementById('addExForm');
+
+        [setsInput, repsInput, restInput, exSelect].forEach(el => el.classList.remove('error'));
+        errorDiv.style.display = 'none';
+
+        try {
+            if (exSelect.value === "") {
+                exSelect.classList.add('error');
+                throw "Te rog selecteaza un exercitiu din lista!";
+            }
+
+            // functie validare numere
+            function checkNumber(inputElement, min, max, fieldName) {
+                const valStr = inputElement.value.trim();
+
+                if (!/^[0-9]+$/.test(valStr)) {
+                    throw fieldName + " trebuie sa contina doar cifre (fara litere sau semne)!";
+                }
+
+                const val = parseInt(valStr);
+
+                if (val < min || val > max) {
+                    throw fieldName + " trebuie sa fie intre " + min + " si " + max + "!";
+                }
+                return val;
+            }
+
+            checkNumber(setsInput, 1, 50, "Numarul de Serii");
+            checkNumber(repsInput, 1, 1000, "Numarul de Repetari");
+            checkNumber(restInput, 0, 60, "Timpul de Pauza");
+
+            form.submit();
+
+        } catch (err) {
+            errorDiv.innerText = "Eroare: " + err;
+            errorDiv.style.display = 'block';
+
+            if (err.includes("Serii")) setsInput.classList.add('error');
+            if (err.includes("Repetari")) repsInput.classList.add('error');
+            if (err.includes("Pauza")) restInput.classList.add('error');
+        }
+    }
+</script>
+
+</body>
+</html>

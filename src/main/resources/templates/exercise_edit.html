@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Editează Exercițiu</title>
+  <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+
+        input, select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+
+        /* stiluri erori */
+        input.error { border: 2px solid #dc3545; background-color: #fff8f8; }
+        .error-msg { color: #dc3545; font-size: 0.9em; margin-bottom: 10px; font-weight: bold; display: none; }
+
+        .btn-save { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn-save:hover { background: #0056b3; }
+
+        a { text-decoration: none; color: #666; margin-left: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Editeaza Exercitiul</h2>
+
+  <div id="editError" class="error-msg"></div>
+
+  <form id="editForm" th:action="@{/exercises/edit/{id}(id=${exercise.id})}" th:object="${exercise}" method="post">
+
+    <label>Nume Exercitiu:</label>
+    <input type="text" id="editNameInput" th:field="*{exerciseName}" placeholder="Numele exercițiului...">
+
+    <label>Grupa Musculara:</label>
+    <select th:field="*{targetMuscleGroup}">
+      <option value="Piept">Piept</option>
+      <option value="Spate">Spate</option>
+      <option value="Picioare">Picioare</option>
+      <option value="Brate">Brate</option>
+      <option value="Umeri">Umeri</option>
+      <option value="Abdomen">Abdomen</option>
+    </select>
+
+    <br><br>
+    <button type="button" class="btn-save" onclick="validateEdit()">Salveaza Modificarile</button>
+    <a href="/exercises">Anuleaza</a>
+  </form>
+</div>
+
+<script>
+    // validare formular editare
+    function validateEdit() {
+        const nameInput = document.getElementById('editNameInput');
+        const errorDiv = document.getElementById('editError');
+        const form = document.getElementById('editForm');
+
+        nameInput.classList.remove('error');
+        errorDiv.style.display = 'none';
+
+        const name = nameInput.value.trim();
+
+        try {
+            if (name === "") throw "Numele nu poate fi gol!";
+            if (name.length > 50) throw "Numele este prea lung (maxim 50 caractere)!";
+
+            // validare regex pentru litere si paranteze
+            if (!/^[a-zA-Z\s()]+$/.test(name)) {
+                throw "Doar litere si paranteze (fara cifre sau semne)!";
+            }
+
+            form.submit();
+
+        } catch (err) {
+            nameInput.classList.add('error');
+            errorDiv.innerText = "Eroare: " + err;
+            errorDiv.style.display = 'block';
+        }
+    }
+</script>
+
+</body>
+</html>

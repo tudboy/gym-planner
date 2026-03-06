@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Gym Planner - Calendar</title>
+  <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+
+        /* stiluri antet */
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { margin: 0; color: #333; font-size: 2.5em; text-transform: capitalize; }
+        .nav-btn { text-decoration: none; color: white; background: #007bff; padding: 10px 20px; border-radius: 5px; margin: 0 15px; font-weight: bold; }
+        .nav-btn:hover { background: #0056b3; }
+
+        /* grila calendar */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* card zi */
+        .day-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 200px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .day-card:hover { transform: translateY(-5px); }
+
+        /* stil azi */
+        .today { border: 2px solid #28a745; background-color: #e8f5e9; }
+
+        .date-header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .day-name { font-weight: bold; color: #666; display: block; }
+        .day-number { font-size: 1.5em; font-weight: bold; color: #333; }
+
+        /* informatii antrenament */
+        .workout-info { flex-grow: 1; text-align: center; }
+        .muscle-group {
+            background: #ffecb3; color: #ff6f00;
+            padding: 5px 10px; border-radius: 15px;
+            font-weight: bold; display: inline-block; margin-bottom: 10px;
+        }
+        .rest-day { color: #28a745; font-weight: bold; font-style: italic; margin-top: 40px; display: block; }
+        .empty-day { color: #999; font-style: italic; margin-top: 40px; display: block; }
+
+        .btn-add {
+            background-color: #007bff; color: white; border: none; padding: 8px;
+            width: 100%; border-radius: 5px; cursor: pointer; margin-top: auto;
+        }
+
+        /* stil meniu navigare */
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .navbar a.active {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar" style="display: flex; justify-content: space-between; padding: 0 10px; background-color: #333;">
+  <div>
+    <a href="/calendar">Calendar</a>
+    <a href="/exercises">Catalog Exercitii</a>
+  </div>
+  <div style="display: flex; align-items: center;">
+    <span style="color: #bbb; margin-right: 15px; font-weight: bold;" th:text="${session.currentUser != null ? 'Salut, ' + session.currentUser.username : ''}">Salut, User</span>
+    <a href="/logout" style="background: #dc3545; border-radius: 4px; padding: 14px 15px;">Iesire</a>
+  </div>
+</div>
+
+<div class="header">
+  <a th:href="@{/calendar(date=${prevWeek})}" class="nav-btn">Saptamana Trecuta</a>
+
+  <span th:text="${#temporals.format(currentDate, 'MMMM yyyy')}">Ianuarie 2026</span>
+
+  <a th:href="@{/calendar(date=${nextWeek})}" class="nav-btn">Saptamana Viitoare</a>
+</div>
+
+<div class="calendar-grid">
+  <div th:each="entry : ${weekPlan}" class="day-card"
+       th:classappend="${entry.key.isEqual(#temporals.createToday())} ? 'today' : ''">
+
+    <div class="date-header">
+      <span class="day-name" th:text="${#temporals.format(entry.key, 'EEEE')}">Luni</span>
+      <span class="day-number" th:text="${entry.key.dayOfMonth}">5</span>
+    </div>
+
+    <div class="workout-info">
+      <div th:if="${entry.value != null and !entry.value.restDay}">
+        <span class="muscle-group" th:text="${entry.value.workoutName}">Piept</span>
+        <ul style="text-align: left; padding-left: 20px; font-size: 0.9em;">
+          <li th:each="ex : ${entry.value.exercises}"
+              th:text="${ex.exercise.exerciseName}">Impins</li>
+        </ul>
+      </div>
+
+      <div th:if="${entry.value != null and entry.value.restDay}">
+        <span class="rest-day">Zi de Relaxare</span>
+      </div>
+
+      <div th:if="${entry.value == null}">
+        <span class="empty-day">Nimic programat</span>
+      </div>
+    </div>
+
+    <a th:href="@{/schedule/manage(date=${entry.key})}" class="btn-add" style="display:block; text-align:center; text-decoration:none; margin-top: auto;">
+      Modifica
+    </a>
+
+    <div th:if="${entry.key.isEqual(#temporals.createToday())
+              and entry.value != null
+              and !entry.value.restDay
+              and !entry.value.exercises.isEmpty()}"
+         style="margin-top: 10px;">
+
+      <a th:href="@{/workout/start(date=${entry.key})}"
+         style="background: #28a745; color: white; display: block; padding: 10px; text-align: center; border-radius: 5px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        START ANTRENAMENT
+      </a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

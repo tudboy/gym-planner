@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login - Gym Planner</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+
+        .card {
+            background: white; padding: 40px; border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 400px; text-align: center;
+        }
+
+        h1 { color: #007bff; margin-bottom: 30px; margin-top: 0; }
+
+        select, input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+
+        /* stiluri erori */
+        input.error { border: 2px solid #dc3545; background-color: #fff8f8; }
+        .error-msg { color: #dc3545; font-size: 0.9em; margin-bottom: 10px; font-weight: bold; display: none; }
+
+        button { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-login { background: #007bff; color: white; margin-bottom: 20px; }
+        .btn-register { background: #28a745; color: white; }
+
+        hr { margin: 30px 0; border: 0; border-top: 1px solid #eee; }
+
+        /* lista utilizatori */
+        .user-list { text-align: left; margin-top: 20px; }
+        .user-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; border-bottom: 1px solid #eee;
+        }
+        .user-item:last-child { border-bottom: none; }
+        .delete-icon { color: #dc3545; cursor: pointer; font-size: 1rem; font-weight: bold; }
+        .delete-icon:hover { color: red; transform: scale(1.1); }
+
+        /* stil modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: white; padding: 30px; border-radius: 10px; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 300px;
+        }
+        .modal-box h3 { margin-top: 0; color: #dc3545; }
+        .modal-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        .btn-yes { background: #dc3545; color: white; flex: 1; padding: 10px; border-radius: 5px; }
+        .btn-no { background: #6c757d; color: white; flex: 1; padding: 10px; border-radius: 5px; }
+
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Gym Planner</h1>
+
+    <form action="/login" method="post" th:if="${!users.empty}">
+        <label style="display:block; text-align:left; margin-bottom:5px; color:#666;">Alege Utilizator:</label>
+        <select name="userId">
+            <option th:each="u : ${users}" th:value="${u.id}" th:text="${u.username}">Daniel</option>
+        </select>
+        <button type="submit" class="btn-login">Intra in Cont</button>
+    </form>
+
+    <div th:if="${users.empty}" style="color: #666; margin-bottom: 20px;">
+        Nu exista utilizatori. Creeaza unul!
+    </div>
+
+    <hr>
+
+    <div id="registerError" class="error-msg"></div>
+    <form id="registerForm" action="/register" method="post">
+        <label style="display:block; text-align:left; margin-bottom:5px; color:#666;">Utilizator Nou:</label>
+
+        <input type="text" id="usernameInput" name="username" placeholder="Numele tau... (max 30)" autocomplete="off">
+
+        <button type="button" class="btn-register" onclick="validateRegister()">Creeaza Cont</button>
+    </form>
+
+    <div class="user-list" th:if="${!users.empty}">
+        <h4 style="margin-bottom: 10px; color: #555;">Gestioneaza Utilizatori:</h4>
+        <div class="user-item" th:each="u : ${users}">
+            <span th:text="${u.username}" style="font-weight: 500;">Nume</span>
+            <span class="delete-icon" th:onclick="'openDeleteModal(' + ${u.id} + ')'" title="Sterge Utilizator">Sterge</span>
+        </div>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Stergere Utilizator</h3>
+        <p>Esti sigur ca vrei sa stergi acest utilizator?</p>
+        <p style="font-size: 0.8em; color: #666;">Se vor sterge istoricul si planificarile lui.</p>
+
+        <div class="modal-buttons">
+            <button class="btn-no" onclick="closeDeleteModal()">NU</button>
+            <button class="btn-yes" onclick="confirmDelete()">DA, Sterge</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // validare inregistrare user
+    function validateRegister() {
+        const nameInput = document.getElementById('usernameInput');
+        const errorDiv = document.getElementById('registerError');
+        const form = document.getElementById('registerForm');
+
+        nameInput.classList.remove('error');
+        errorDiv.style.display = 'none';
+
+        const name = nameInput.value.trim();
+
+        try {
+            if (name === "") {
+                throw "Introdu un nume!";
+            }
+
+            if (name.length > 30) {
+                throw "Numele este prea lung (maxim 30 caractere)!";
+            }
+
+            // validare doar litere cifre spatii
+            const pattern = /^[a-zA-Z0-9\s]+$/;
+
+            if (!pattern.test(name)) {
+                throw "Doar litere, cifre si spatii sunt permise!";
+            }
+
+            form.submit();
+
+        } catch (err) {
+            nameInput.classList.add('error');
+            errorDiv.innerText = "Eroare: " + err;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    let userIdToDelete = null;
+    const modal = document.getElementById('deleteModal');
+
+    function openDeleteModal(id) {
+        userIdToDelete = id;
+        modal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        userIdToDelete = null;
+        modal.style.display = 'none';
+    }
+
+    function confirmDelete() {
+        if (userIdToDelete) {
+            window.location.href = '/deleteUser/' + userIdToDelete;
+        }
+    }
+</script>
+
+</body>
+</html>

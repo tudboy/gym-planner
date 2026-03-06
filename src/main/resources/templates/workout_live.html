@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Live Workout</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+        /* stil dark mode */
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
+
+        /* header */
+        .top-bar {
+            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
+            background: #1e1e1e; border-bottom: 1px solid #333; height: 60px; box-sizing: border-box;
+        }
+
+        .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; color: #888; transition: 0.2s; padding: 5px; }
+        .btn-icon:hover { color: white; transform: scale(1.1); }
+        .btn-exit { color: #dc3545; }
+
+        #totalTimer { color: #4ade80; font-family: monospace; font-size: 1.3em; font-weight: bold; }
+
+        /* zona centrala */
+        .main-stage { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
+
+        h1 { color: #fff; margin-bottom: 5px; font-size: 2.2rem; margin-top: 0; }
+        h3 { color: #4ade80; margin-top: 0; font-weight: normal; font-size: 1.4rem; margin-bottom: 20px; }
+
+        /* inputuri */
+        .big-input-group { display: flex; gap: 15px; justify-content: center; width: 100%; max-width: 400px; }
+        .input-wrapper { display: flex; flex-direction: column; flex: 1; }
+        .input-wrapper label { color: #666; margin-bottom: 8px; font-weight: bold; letter-spacing: 1px; }
+
+        /* input text validat manual */
+        input[type="text"] {
+            background: #1e1e1e; border: 2px solid #333; color: white;
+            font-size: 2.5rem; text-align: center; padding: 20px 0; border-radius: 15px;
+            outline: none; transition: 0.2s; width: 100%;
+        }
+        input[type="text"]:focus { border-color: #007bff; background: #252525; }
+        input.error { border-color: #dc3545; animation: shake 0.3s; }
+
+        /* mesaj eroare */
+        #errorDisplay {
+            color: #dc3545; font-weight: bold; height: 20px; margin-top: 15px; font-size: 1rem;
+            opacity: 0; transition: opacity 0.3s;
+        }
+
+        /* buton jos */
+        .action-bar { padding: 20px; background: #1e1e1e; border-top: 1px solid #333; }
+        .btn-big {
+            background: #007bff; color: white; border: none; width: 100%;
+            padding: 18px; font-size: 1.3rem; font-weight: bold; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        .btn-big:active { transform: scale(0.98); }
+
+        /* layere suprapuse */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 100; display: none;
+            flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px);
+        }
+
+        /* timer cerc */
+        .timer-circle {
+            width: 260px; height: 260px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 4.5rem; font-weight: bold; color: #4ade80; margin-bottom: 30px;
+            position: relative; font-family: monospace;
+            background: #111; box-shadow: 0 0 30px rgba(74, 222, 128, 0.1);
+        }
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+        circle { fill: none; stroke: #4ade80; stroke-width: 8; stroke-dasharray: 816; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear; stroke-linecap: round; }
+        .circle-bg { stroke: #333; stroke-width: 8; }
+
+        .btn-skip { background: transparent; border: 2px solid #444; color: #bbb; padding: 12px 40px; border-radius: 30px; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
+        .btn-skip:hover { border-color: white; color: white; background: rgba(255,255,255,0.1); }
+        .btn-resume { background: #28a745; color: white; padding: 15px 40px; border-radius: 30px; border: none; font-size: 1.5rem; cursor: pointer; }
+
+        /* modal iesire */
+        .modal-box { background: #252525; padding: 30px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; border: 1px solid #444; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-modal { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-modal-yes { background: #dc3545; color: white; }
+        .btn-modal-no { background: #444; color: white; }
+
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+
+        #hiddenFormContainer { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <button class="btn-icon btn-exit" onclick="openExitModal()" title="Iesi">Iesire</button>
+  <span id="totalTimer">00:00</span>
+  <button class="btn-icon" onclick="toggleGlobalPause()" title="Pauza Cronometru">Pauza</button>
+</div>
+
+<div class="main-stage" id="workoutStage">
+  <h1 id="uiExName">Impins Piept</h1>
+  <h3 id="uiSetInfo">Seria 1 - Target: 10</h3>
+
+  <div class="big-input-group">
+    <div class="input-wrapper">
+      <label>KG</label>
+      <input type="text" id="uiWeight" placeholder="0" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="input-wrapper">
+      <label>REPS</label>
+      <input type="text" id="uiReps" placeholder="0" inputmode="numeric" autocomplete="off">
+    </div>
+  </div>
+
+  <div id="errorDisplay"></div>
+</div>
+
+<div id="restScreen" class="overlay-screen">
+  <h2 style="color: #888; margin-top:0;">Pauza</h2>
+  <div class="timer-circle">
+    <svg>
+      <circle cx="130" cy="130" r="124" class="circle-bg"></circle>
+      <circle cx="130" cy="130" r="124" id="progressRing"></circle>
+    </svg>
+    <span id="restTimerDisplay">00:00</span>
+  </div>
+  <h3 id="nextExPreview" style="color: #aaa; font-size: 1rem; margin-bottom: 40px;">Urmeaza: Seria 2</h3>
+  <div style="display:flex; gap:15px;">
+    <button class="btn-skip" onclick="addTime(30)" style="border-color:#d63384; color:#d63384">+30s</button>
+    <button class="btn-skip" onclick="skipRest()">Sari Pauza >></button>
+  </div>
+</div>
+
+<div id="pauseScreen" class="overlay-screen" style="background: rgba(0,0,0,0.98);">
+  <h1 style="font-size: 3rem;">PAUZA</h1>
+  <p style="color:#aaa; margin-bottom: 30px;">Timpul este oprit.</p>
+  <button class="btn-resume" onclick="toggleGlobalPause()">> REPORNESTE</button>
+</div>
+
+<div id="exitModal" class="overlay-screen" style="background: rgba(0,0,0,0.9);">
+  <div class="modal-box">
+    <h2 style="margin-top:0;">Iesire?</h2>
+    <p style="color:#aaa;">Datele nesalvate se vor pierde.</p>
+    <div class="modal-buttons">
+      <button class="btn-modal btn-modal-no" onclick="closeExitModal()">NU, Ramai</button>
+      <button class="btn-modal btn-modal-yes" onclick="confirmExitAction()">DA, Iesi</button>
+    </div>
+  </div>
+</div>
+
+<div class="action-bar" id="actionBar">
+  <button class="btn-big" onclick="finishSet()">GATA SERIA</button>
+</div>
+
+<form id="realForm" action="/workout/save" method="post" th:object="${historyForm}">
+  <input type="hidden" th:field="*{workoutDate}">
+  <div id="hiddenInputsWrapper">
+    <div th:each="set, stat : *{sets}" class="hidden-set-row"
+         th:data-index="${stat.index}"
+         th:data-ex-name="${set.exerciseName}"
+         th:data-set-num="${set.setNumber}"
+         th:data-target="${set.repsTarget}"
+         th:data-rest="${set.recommendedRestSeconds}">
+
+      <input type="hidden" th:field="*{sets[__${stat.index}__].exerciseName}">
+      <input type="hidden" th:field="*{sets[__${stat.index}__].setNumber}">
+      <input type="hidden" th:field="*{sets[__${stat.index}__].repsTarget}">
+      <input type="hidden" th:field="*{sets[__${stat.index}__].weightKG}" class="real-weight">
+      <input type="hidden" th:field="*{sets[__${stat.index}__].repsPerformed}" class="real-reps">
+    </div>
+  </div>
+</form>
+
+<script>
+    // setare initiala
+    let setsData = [];
+    document.querySelectorAll('.hidden-set-row').forEach(row => {
+        setsData.push({
+            index: parseInt(row.getAttribute('data-index')),
+            exName: row.getAttribute('data-ex-name') || "Exercițiu",
+            setNum: parseInt(row.getAttribute('data-set-num')) || 1,
+            target: parseInt(row.getAttribute('data-target')) || 10,
+            restSeconds: parseInt(row.getAttribute('data-rest')) || 90,
+            weightInput: row.querySelector('.real-weight'),
+            repsInput: row.querySelector('.real-reps')
+        });
+    });
+
+    let currentSetIndex = 0;
+    let workoutDuration = 0;
+    let isGlobalPaused = false;
+
+    // elemente interfata
+    const uiExName = document.getElementById('uiExName');
+    const uiSetInfo = document.getElementById('uiSetInfo');
+    const uiWeight = document.getElementById('uiWeight');
+    const uiReps = document.getElementById('uiReps');
+    const errorDisplay = document.getElementById('errorDisplay');
+    const btnBig = document.querySelector('.btn-big');
+    const exitModal = document.getElementById('exitModal');
+
+    updateUI();
+
+    setInterval(() => {
+        if (!isGlobalPaused) {
+            workoutDuration++;
+            document.getElementById('totalTimer').innerText = formatTimeSimple(workoutDuration);
+        }
+    }, 1000);
+
+    function updateUI() {
+        if (currentSetIndex >= setsData.length) {
+            finishWorkoutScreen();
+            return;
+        }
+
+        const currentSet = setsData[currentSetIndex];
+        uiExName.innerText = currentSet.exName;
+        uiSetInfo.innerText = `Seria ${currentSet.setNum} - Target: ${currentSet.target}`;
+
+        uiReps.value = currentSet.target;
+
+        if (uiWeight.value === '' && currentSetIndex > 0 && setsData[currentSetIndex-1].exName === currentSet.exName) {
+            uiWeight.value = setsData[currentSetIndex-1].weightInput.value;
+        }
+        uiWeight.focus();
+    }
+
+    // validare date serie
+    function finishSet() {
+        const weightValStr = uiWeight.value.trim();
+        const repsValStr = uiReps.value.trim();
+
+        uiWeight.classList.remove('error');
+        uiReps.classList.remove('error');
+        errorDisplay.style.opacity = '0';
+
+        try {
+            // validare regex cifre
+            const numberPattern = /^[0-9]*\.?[0-9]+$/;
+
+            if (weightValStr !== "" && !numberPattern.test(weightValStr)) {
+                uiWeight.classList.add('error');
+                throw "Greutatea contine caractere invalide!";
+            }
+            if (repsValStr !== "" && !/^[0-9]+$/.test(repsValStr)) {
+                uiReps.classList.add('error');
+                throw "Repetarile trebuie sa fie numere intregi!";
+            }
+
+            // validare interval valori
+            const weightVal = parseFloat(weightValStr) || 0;
+            const repsVal = parseInt(repsValStr) || 0;
+
+            if (weightVal < 0 || weightVal > 1000) {
+                uiWeight.classList.add('error');
+                throw "Greutatea trebuie sa fie intre 0 si 1000 kg!";
+            }
+
+            if (repsVal < 0 || repsVal > 500) {
+                uiReps.classList.add('error');
+                throw "Numarul de repetari este prea mare!";
+            }
+
+            const currentSet = setsData[currentSetIndex];
+            currentSet.weightInput.value = weightVal;
+            currentSet.repsInput.value = repsVal;
+
+            if (currentSetIndex < setsData.length - 1) {
+                startRest(currentSet.restSeconds);
+            } else {
+                currentSetIndex++;
+                updateUI();
+            }
+
+        } catch (errorMessage) {
+            errorDisplay.innerText = errorMessage;
+            errorDisplay.style.opacity = '1';
+        }
+    }
+
+    // timer si pauza
+    let restInterval;
+    let restTimeLeft = 0;
+    let restTimeTotal = 0;
+    const ring = document.getElementById('progressRing');
+    const radius = ring.r.baseVal.value;
+    const circumference = radius * 2 * Math.PI;
+    ring.style.strokeDasharray = `${circumference} ${circumference}`;
+
+    function startRest(seconds) {
+        if (seconds <= 0) { skipRest(); return; }
+        document.getElementById('restScreen').style.display = 'flex';
+        document.getElementById('actionBar').style.display = 'none';
+
+        const nextSet = setsData[currentSetIndex + 1];
+        let nextText = (nextSet.exName !== setsData[currentSetIndex].exName)
+            ? `Urmeaza: ${nextSet.exName}`
+            : `Urmeaza: Seria ${nextSet.setNum}`;
+        document.getElementById('nextExPreview').innerText = nextText;
+
+        restTimeLeft = seconds;
+        restTimeTotal = seconds;
+        updateRestDisplay();
+
+        restInterval = setInterval(() => {
+            if (!isGlobalPaused) {
+                restTimeLeft--;
+                updateRestDisplay();
+                let percent = (restTimeLeft / restTimeTotal) * 100;
+                if (percent < 0) percent = 0;
+                ring.style.strokeDashoffset = circumference - percent / 100 * circumference;
+
+                if (restTimeLeft <= 0) {
+                    playBeep();
+                    skipRest();
+                }
+            }
+        }, 1000);
+    }
+
+    function addTime(seconds) {
+        restTimeLeft += seconds;
+        restTimeTotal += seconds;
+        updateRestDisplay();
+    }
+
+    function updateRestDisplay() {
+        let m = Math.floor(restTimeLeft / 60).toString().padStart(2, '0');
+        let s = (restTimeLeft % 60).toString().padStart(2, '0');
+        document.getElementById('restTimerDisplay').innerText = m + ":" + s;
+    }
+
+    function skipRest() {
+        clearInterval(restInterval);
+        document.getElementById('restScreen').style.display = 'none';
+        document.getElementById('actionBar').style.display = 'block';
+        currentSetIndex++;
+        updateUI();
+    }
+
+    function toggleGlobalPause() {
+        isGlobalPaused = !isGlobalPaused;
+        document.getElementById('pauseScreen').style.display = isGlobalPaused ? 'flex' : 'none';
+    }
+
+    function openExitModal() {
+        isGlobalPaused = true;
+        exitModal.style.display = 'flex';
+    }
+
+    function closeExitModal() {
+        isGlobalPaused = false;
+        exitModal.style.display = 'none';
+    }
+
+    function confirmExitAction() {
+        window.location.href = '/calendar';
+    }
+
+    function finishWorkoutScreen() {
+        uiExName.innerText = "Gata!";
+        uiSetInfo.innerText = "";
+        document.querySelector('.big-input-group').style.display = 'none';
+        errorDisplay.style.display = 'none';
+
+        btnBig.innerText = "SALVEAZA TOT";
+        btnBig.style.backgroundColor = "#28a745";
+
+        btnBig.onclick = () => {
+            document.getElementById('realForm').submit();
+        };
+    }
+
+    function formatTimeSimple(seconds) {
+        let m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        let s = (seconds % 60).toString().padStart(2, '0');
+        return m + ":" + s;
+    }
+
+    function playBeep() {
+        new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+    }
+</script>
+
+</body>
+</html>
